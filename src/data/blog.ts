@@ -8,6 +8,7 @@
 export interface BlogPost {
   id: string;
   slug: string;
+  citySlug: import("./cities").CitySlug;
   title: string;
   excerpt: string;
   content: string; // one big text block, blank line = new paragraph
@@ -24,6 +25,7 @@ export interface BlogPost {
 export const blogPosts: BlogPost[] = [
   {
     id: "post_k3m7q2w8",
+    citySlug: "round-rock",
     slug: "best-med-spas-round-rock-2026",
     title: "The Best Med Spas in Round Rock for 2026",
     excerpt:
@@ -57,6 +59,7 @@ No matter which med spa you choose, we recommend booking a consultation first. M
   },
   {
     id: "post_n8t4p1m5",
+    citySlug: "round-rock",
     slug: "round-rock-dining-guide",
     title: "A Local's Dining Guide to Round Rock",
     excerpt:
@@ -81,6 +84,7 @@ Rounding out the list is Luigi's Italian Kitchen, a family-run spot that's been 
   },
   {
     id: "post_q2k9r6t3",
+    citySlug: "round-rock",
     slug: "home-service-pros-you-can-trust",
     title: "Home Service Pros You Can Trust in Round Rock",
     excerpt:
@@ -110,6 +114,7 @@ All of the businesses featured in this guide are verified on our directory, mean
   },
   {
     id: "post_w5m1q8n4",
+    citySlug: "round-rock",
     slug: "iron-ink-tattoo-spotlight",
     title: "Inside Iron Ink: Round Rock's Premier Tattoo Studio",
     excerpt:
@@ -137,6 +142,7 @@ If you're considering a tattoo in Round Rock, Iron Ink should be your first stop
   },
   {
     id: "post_x9k3m2t7",
+    citySlug: "round-rock",
     slug: "round-rock-auto-repair-trust",
     title: "Why Round Rock Auto Repair is the Shop Locals Trust",
     excerpt:
@@ -162,6 +168,7 @@ All parts are backed by a 24-month / 24,000-mile nationwide warranty. Their hone
   },
   {
     id: "post_y4n7q1k8",
+    citySlug: "round-rock",
     slug: "diners-drive-ins-round-rock-diner",
     title: "The Round Rock Diner: 25 Years of Comfort Food Tradition",
     excerpt:
@@ -187,6 +194,7 @@ Whether you stop by for lunch, bring the family for dinner, or grab a slice to g
   },
   {
     id: "post_z2m8t5r3",
+    citySlug: "round-rock",
     slug: "bbq-and-blues-festival-guide",
     title: "Your Guide to the Round Rock BBQ & Blues Festival 2026",
     excerpt:
@@ -214,6 +222,7 @@ Tickets are just $12 in advance or $15 at the gate, with kids under 10 admitted 
   },
   {
     id: "post_a7k4n9m1",
+    citySlug: "round-rock",
     slug: "round-rock-gives-back-charity-festival",
     title: "Round Rock Gives Back: 5 Local Businesses, One Big Heart",
     excerpt:
@@ -252,6 +261,7 @@ Round Rock takes care of its own. Bring your family, bring your appetite, and br
   },
   {
     id: "post_b3t6q2k8",
+    citySlug: "round-rock",
     slug: "beating-texas-heat-hvac-tips",
     title:
       "Beating the Texas Heat: HVAC Tips Every Round Rock Homeowner Should Know",

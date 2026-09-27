@@ -1,0 +1,7 @@
+---
+import Base from '../../layouts/Base.astro';
+import { events } from '../../data/events';
+export function getStaticPaths() { return events.map(item => ({params: {slug:item.slug}})); }
+const path = `/events/${Astro.params.slug}`;
+---
+<Base page="event" path={path} />

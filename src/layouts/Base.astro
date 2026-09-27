@@ -1,0 +1,25 @@
+---
+import '../index.css';
+import '../App.css';
+import AstroShell from '../components/AstroShell';
+import { seoFor } from '../lib/seo';
+const { page, path } = Astro.props;
+const seo = seoFor(page, path);
+const site = 'Round Rock Local';
+const title = seo.title.includes(site) ? seo.title : `${seo.title} - ${site}`;
+const canonical = `https://roundrocklocal.com${path}`;
+---
+<!doctype html><html lang="en"><head>
+<meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<title>{title}</title><meta name="description" content={seo.description} />
+{seo.noIndex && <meta name="robots" content="noindex, nofollow" />}
+<link rel="canonical" href={canonical} />
+<meta property="og:title" content={title} /><meta property="og:description" content={seo.description} />
+<meta property="og:type" content="website" /><meta property="og:image" content={seo.ogImage} />
+<meta property="og:url" content={canonical} /><meta property="og:site_name" content={site} />
+<meta name="twitter:card" content="summary_large_image" /><meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={seo.description} /><meta name="twitter:image" content={seo.ogImage} />
+{seo.schemaJson && <script type="application/ld+json" set:html={JSON.stringify(seo.schemaJson)} />}
+<script is:inline>(function(){try{var stored=localStorage.getItem('rr-local-theme');var light=window.matchMedia('(prefers-color-scheme: light)').matches;document.documentElement.classList.toggle('dark',stored?stored==='dark':!light)}catch(e){document.documentElement.classList.add('dark')}})();</script>
+</head><body><AstroShell page={page} path={path} client:load /></body></html>

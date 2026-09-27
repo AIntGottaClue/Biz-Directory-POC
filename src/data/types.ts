@@ -1,3 +1,4 @@
+import type { CitySlug } from "./cities";
 import type { CategorySlug } from "./categories";
 export type { CategorySlug };
 
@@ -22,7 +23,8 @@ export interface Business {
   hideEmail?: boolean; // Set to true to hide the email from public listing pages
   website?: string;
   address?: string;
-  city?: string;
+  city: string;
+  citySlug: CitySlug;
   state?: string;
   zip?: string;
   hours?: { day: string; time: string }[];

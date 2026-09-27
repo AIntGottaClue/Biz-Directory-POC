@@ -1,0 +1,27 @@
+---
+import Base from '../../layouts/Base.astro';
+import { cities, cityPath } from '../../data/cities';
+import { businesses } from '../../data/listings';
+import { categories } from '../../data/categories';
+import { events } from '../../data/events';
+import { blogPosts } from '../../data/blog';
+export function getStaticPaths() {
+const pages = [
+  ['/', 'home'], ['/search','search'], ['/categories','categories'], ['/premium','premium'],
+  ['/blog','blog'], ['/events','events'],
+  ...categories.map(c => [`/category/${c.slug}`, 'category']),
+] as const;
+
+  return cities.filter(c => c.prefix).flatMap(city => [
+    ...pages.map(([suffix,page]) => ({params:{city:city.slug,rest:suffix === '/' ? undefined : suffix.slice(1)},props:{page,path:cityPath(city.slug,suffix)}})),
+    ...businesses.filter(b => b.citySlug === city.slug).flatMap(b => [
+      {params:{city:city.slug,rest:`business/${b.slug}`},props:{page:'business',path:cityPath(city.slug,`/business/${b.slug}`)}},
+      {params:{city:city.slug,rest:`claim/${b.slug}`},props:{page:'claim',path:cityPath(city.slug,`/claim/${b.slug}`)}},
+    ]),
+    ...blogPosts.filter(p => p.citySlug === city.slug).map(p => ({params:{city:city.slug,rest:`blog/${p.slug}`},props:{page:'post',path:cityPath(city.slug,`/blog/${p.slug}`)}})),
+    ...events.filter(e => e.citySlug === city.slug).map(e => ({params:{city:city.slug,rest:`events/${e.slug}`},props:{page:'event',path:cityPath(city.slug,`/events/${e.slug}`)}})),
+  ]);
+}
+const {page,path} = Astro.props;
+---
+<Base page={page} path={path} />

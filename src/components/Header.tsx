@@ -1,7 +1,8 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useCity } from "@/lib/router";
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
+import { cities, cityPath } from "@/data/cities";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -13,6 +14,7 @@ const navItems = [
 ];
 
 export default function Header() {
+  const city = useCity();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -68,6 +70,14 @@ export default function Header() {
             ))}
           </nav>
 
+          {/* City switcher keeps the existing header and changes only location. */}
+          <div className="flex items-center gap-2 text-white text-xs sm:text-sm">
+            <label htmlFor="city-switch" className="sr-only">Choose city</label>
+            <select id="city-switch" value={city.slug} onChange={e => window.location.assign(cityPath(e.target.value as typeof city.slug))}
+              className="max-w-[125px] sm:max-w-none rounded-lg border border-white/30 bg-[#0f172a] px-2 py-2 text-white" aria-label="Choose city">
+              {cities.map(c => <option key={c.slug} value={c.slug}>{c.name}</option>)}
+            </select>
+          </div>
           {/* Right utilities */}
           <div className="flex shrink-0 items-center gap-3 md:pl-6 md:border-l md:border-white/15">
             <ThemeToggle />

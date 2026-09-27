@@ -5,6 +5,7 @@
 export interface EventItem {
   id: string;
   slug: string;
+  citySlug: import("./cities").CitySlug;
   title: string;
   description: string;
   content: string[]; // array of paragraphs
@@ -24,6 +25,7 @@ export interface EventItem {
 export const events: EventItem[] = [
   {
     id: "evt_q7r2s5m8",
+    citySlug: "round-rock",
     slug: "round-rock-farmers-market",
     title: "Round Rock Farmers Market",
     description:
@@ -50,6 +52,7 @@ export const events: EventItem[] = [
   },
   {
     id: "evt_t4m9k3n1",
+    citySlug: "round-rock",
     slug: "round-rock-night-live",
     title: "Round Rock Night Live — Music & Food Festival",
     description:
@@ -76,6 +79,7 @@ export const events: EventItem[] = [
   },
   {
     id: "evt_v8k2q6t5",
+    citySlug: "round-rock",
     slug: "small-business-expo-2026",
     title: "Round Rock Small Business Expo 2026",
     description:
@@ -102,6 +106,7 @@ export const events: EventItem[] = [
   },
   {
     id: "evt_w1m5n9r3",
+    citySlug: "round-rock",
     slug: "round-rock-car-show-2026",
     title: "Round Rock Classic Car Show 2026",
     description:
@@ -130,6 +135,7 @@ export const events: EventItem[] = [
   },
   {
     id: "evt_x6t3k7m2",
+    citySlug: "round-rock",
     slug: "bbq-and-blues-festival-2026",
     title: "Round Rock BBQ & Blues Festival 2026",
     description:
@@ -158,6 +164,7 @@ export const events: EventItem[] = [
   },
   {
     id: "evt_y9n4q1t8",
+    citySlug: "round-rock",
     slug: "round-rock-gives-back-2026",
     title: "Round Rock Gives Back 2026 — Charity Festival",
     description:

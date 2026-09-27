@@ -13,5 +13,5 @@ Allow: /
 User-agent: *
 Allow: /
 
-# Sitemap — replace YOURDOMAIN.com with your real domain
-Sitemap: https://YOURDOMAIN.com/sitemap.xml
+# Sitemap domain matches astro.config.mjs
+Sitemap: https://roundrocklocal.com/sitemap.xml

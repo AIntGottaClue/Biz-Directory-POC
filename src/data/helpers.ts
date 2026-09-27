@@ -1,3 +1,4 @@
+import type { CitySlug } from "./cities";
 import type { Business } from "./types";
 import { businesses } from "./listings";
 import { categories, getCategory } from "./categories";
@@ -31,22 +32,22 @@ export type { Category, CategorySlug } from "./categories";
 
 // --- Query helpers ---
 // Premium listings show in the "Featured" section on the homepage.
-export const getFeatured = (limit = 10) =>
-  businesses.filter((b) => b.premium).slice(0, limit);
+export const getFeatured = (limit = 10, city: CitySlug = 'round-rock') =>
+  businesses.filter((b) => b.premium && b.citySlug === city).slice(0, limit);
 
-export const getLatest = (limit = 10) =>
-  [...businesses]
+export const getLatest = (limit = 10, city: CitySlug = 'round-rock') =>
+  businesses.filter(b => b.citySlug === city)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, limit);
 
-export const getByCategory = (slug: CategorySlug) =>
-  businesses.filter((b) => b.category === slug);
+export const getByCategory = (slug: CategorySlug, city: CitySlug = 'round-rock') =>
+  businesses.filter((b) => b.category === slug && b.citySlug === city);
 
-export const getBySlug = (slug: string) =>
-  businesses.find((b) => b.slug === slug);
+export const getBySlug = (slug: string, city: CitySlug = 'round-rock') =>
+  businesses.find((b) => b.slug === slug && b.citySlug === city);
 
-export const getCategoryListingsSorted = (slug: CategorySlug) => {
-  const list = getByCategory(slug);
+export const getCategoryListingsSorted = (slug: CategorySlug, city: CitySlug = 'round-rock') => {
+  const list = getByCategory(slug, city);
   // Premium listings first, then the rest.
   const tier = (b: Business) => (b.premium ? 0 : 1);
   return [...list].sort((a, b) => {
@@ -64,12 +65,13 @@ export const getCategoryListingsSorted = (slug: CategorySlug) => {
   });
 };
 
-export const searchBusinesses = (q: string) => {
+export const searchBusinesses = (q: string, city: CitySlug = 'round-rock') => {
   const term = q.trim().toLowerCase();
   const tier = (b: Business) => (b.premium ? 0 : 1);
+  const cityBusinesses = businesses.filter(b => b.citySlug === city);
   const base = !term
-    ? businesses
-    : businesses.filter(
+    ? cityBusinesses
+    : cityBusinesses.filter(
         (b) =>
           b.name.toLowerCase().includes(term) ||
           b.categoryName.toLowerCase().includes(term) ||
@@ -93,7 +95,7 @@ export const searchBusinesses = (q: string) => {
  * Return autosuggest matches: business names, categories, and service keywords.
  * Results are grouped into "businesses", "categories", and "keywords" (max 6 each).
  */
-export const getSuggestions = (q: string) => {
+export const getSuggestions = (q: string, city: CitySlug = 'round-rock') => {
   const term = q.trim().toLowerCase();
   if (!term)
     return {
@@ -102,7 +104,7 @@ export const getSuggestions = (q: string) => {
       keywords: [] as string[],
     };
 
-  const bizMatches = businesses
+  const bizMatches = businesses.filter(b => b.citySlug === city)
     .filter((b) => b.name.toLowerCase().includes(term))
     .slice(0, 6);
 
@@ -114,7 +116,7 @@ export const getSuggestions = (q: string) => {
   const categoryNames = new Set(categories.map((c) => c.name.toLowerCase()));
 
   const keywordSet = new Set<string>();
-  for (const b of businesses) {
+  for (const b of businesses.filter(b => b.citySlug === city)) {
     (b.categories ?? []).forEach((c) => {
       const cat = getCategory(c);
       if (
@@ -135,24 +137,24 @@ export const getSuggestions = (q: string) => {
 };
 
 // --- Blog / Event ↔ Business linking ---
-export const getBlogsForBusiness = (slug: string) =>
-  blogPosts.filter((p) => (p.relatedBusinessSlugs ?? []).includes(slug));
+export const getBlogsForBusiness = (slug: string, city: CitySlug = 'round-rock') =>
+  blogPosts.filter((p) => p.citySlug === city && (p.relatedBusinessSlugs ?? []).includes(slug));
 
-export const getEventsForBusiness = (slug: string) =>
-  events.filter((e) => (e.relatedBusinessSlugs ?? []).includes(slug));
+export const getEventsForBusiness = (slug: string, city: CitySlug = 'round-rock') =>
+  events.filter((e) => e.citySlug === city && (e.relatedBusinessSlugs ?? []).includes(slug));
 
-export const getBusinessesForBlog = (slugs: string[] | undefined) =>
-  !slugs ? [] : businesses.filter((b) => slugs.includes(b.slug));
+export const getBusinessesForBlog = (slugs: string[] | undefined, city: CitySlug = 'round-rock') =>
+  !slugs ? [] : businesses.filter((b) => b.citySlug === city && slugs.includes(b.slug));
 
-export const getBusinessesForEvent = (slugs: string[] | undefined) =>
-  !slugs ? [] : businesses.filter((b) => slugs.includes(b.slug));
+export const getBusinessesForEvent = (slugs: string[] | undefined, city: CitySlug = 'round-rock') =>
+  !slugs ? [] : businesses.filter((b) => b.citySlug === city && slugs.includes(b.slug));
 
 // --- Blog ↔ Event linking ---
-export const getEventsForBlog = (slugs: string[] | undefined) =>
-  !slugs ? [] : events.filter((e) => slugs.includes(e.slug));
+export const getEventsForBlog = (slugs: string[] | undefined, city: CitySlug = 'round-rock') =>
+  !slugs ? [] : events.filter((e) => e.citySlug === city && slugs.includes(e.slug));
 
-export const getBlogsForEvent = (slugs: string[] | undefined) =>
-  !slugs ? [] : blogPosts.filter((p) => slugs.includes(p.slug));
+export const getBlogsForEvent = (slugs: string[] | undefined, city: CitySlug = 'round-rock') =>
+  !slugs ? [] : blogPosts.filter((p) => p.citySlug === city && slugs.includes(p.slug));
 
 // --- Open / closed status ---
 const DAY_MAP: Record<string, number> = {

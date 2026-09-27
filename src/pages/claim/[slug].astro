@@ -1,0 +1,7 @@
+---
+import Base from '../../layouts/Base.astro';
+import { businesses } from '../../data/listings';
+export function getStaticPaths() { return businesses.filter(item => item.citySlug === 'round-rock').map(item => ({params: {slug:item.slug}})); }
+const path = `/claim/${Astro.params.slug}`;
+---
+<Base page="claim" path={path} />

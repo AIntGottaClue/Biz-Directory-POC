@@ -1,0 +1,7 @@
+---
+import Base from '../../layouts/Base.astro';
+import { blogPosts } from '../../data/blog';
+export function getStaticPaths() { return blogPosts.map(item => ({params: {slug:item.slug}})); }
+const path = `/blog/${Astro.params.slug}`;
+---
+<Base page="post" path={path} />

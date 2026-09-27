@@ -1,7 +1,8 @@
-import { Link } from "react-router-dom";
+import { useCity, Link } from "@/lib/router";
 import { MapPin } from "lucide-react";
 
 export default function Footer() {
+  const city = useCity();
   return (
     <footer className="relative mt-0 overflow-hidden bg-[#0f172a] text-white">
       {/* Gold accent line at top */}
@@ -23,11 +24,11 @@ export default function Footer() {
               </span>
             </Link>
             <p className="mt-1 text-sm text-white/50 leading-relaxed max-w-xs">
-              A local business directory built to help neighbors find and trust
-              businesses near them in Round Rock, Texas.
+              A local business directory built to help neighbors find
+              businesses near them in {city.name}, Texas.
             </p>
             <div className="mt-5 inline-flex items-center gap-1.5 text-sm text-white/60">
-              <MapPin className="h-4 w-4 text-accent" /> Round Rock, TX
+              <MapPin className="h-4 w-4 text-accent" /> {city.name}, TX
             </div>
           </div>
 

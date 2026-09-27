@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCity, useNavigate } from "@/lib/router";
 import { Search, Store, Tag, ArrowRight, BadgeCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ export default function SearchBar({
   variant = "compact",
   className = "",
 }: SearchBarProps) {
+  const city = useCity();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -31,7 +32,7 @@ export default function SearchBar({
     categories: catMatches,
     keywords,
   } = q.trim()
-    ? getSuggestions(q)
+    ? getSuggestions(q, city.slug)
     : { businesses: [], categories: [], keywords: [] };
 
   // When no query, show all categories with business counts
@@ -40,7 +41,7 @@ export default function SearchBar({
         type: "category" as const,
         label: c.name,
         slug: c.slug,
-        count: getByCategory(c.slug).length,
+        count: getByCategory(c.slug, city.slug).length,
       }))
     : [];
 
