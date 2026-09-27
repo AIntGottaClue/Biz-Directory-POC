@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Title fallback for non-JS crawlers. Description and all other SEO meta tags are managed dynamically by the SEOHead component (React) and by the static HTML generator (GenerateStaticPages). Do NOT hardcode description/og:/twitter:/canonical here — they will duplicate. -->
+    <title>Round Rock Local — Round Rock, TX Business Directory</title>
+    <script>
+      // Prevent theme flash: apply stored or device-preferred theme before paint
+      (function () {
+        try {
+          var stored = localStorage.getItem("rr-local-theme");
+          var prefersLight = window.matchMedia(
+            "(prefers-color-scheme: light)",
+          ).matches;
+          var theme = stored || (prefersLight ? "light" : "dark");
+          if (theme === "dark") document.documentElement.classList.add("dark");
+        } catch (e) {
+          document.documentElement.classList.add("dark");
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,606 @@
+================================================================================
+OUTPUT TABLE — BUILD INSTRUCTIONS
+================================================================================
+This document describes every feature of the interactive output table in
+src/components/OutputPanel.tsx (the TableView component). Follow each step in
+order and check off every "[ ]" item to ensure full parity with the original
+implementation.
+
+The table is rendered inside the OutputPanel, which is the bottom section of
+the Playground page. The OutputPanel has a header with three view tabs
+(Table, JSON, Document), a console bar, and a content area. The TableView
+is shown when the "Table" tab is active.
+
+================================================================================
+SECTION 1 — DATA PREPARATION
+================================================================================
+Goal: Convert arbitrary execution results into a uniform table structure.
+
+1.1  Define the TableData interface
+     [ ] Create an interface with:
+         - rows: Record<string, unknown>[]  (array of row objects)
+         - keys: string[]                   (column header names)
+         - isKeyValue: boolean              (true when source was a plain object)
+
+1.2  Define the CellData interface
+     [ ] Create an interface with:
+         - column: string        (column header name)
+         - content: string        (display text for popup)
+         - contentForCopy: string (text used when copying to clipboard)
+         - row: number            (zero-based row index)
+         - col: number            (zero-based column index)
+
+1.3  Implement prepareTableData(result)
+     [ ] If result is a non-empty array of objects:
+         - Extract keys from Object.keys(result[0])
+         - Return { rows, keys, isKeyValue: false }
+     [ ] If result is a non-null, non-array object:
+         - Map Object.entries into rows of { Key, Value }
+         - Return { rows, keys: ["Key", "Value"], isKeyValue: true }
+     [ ] Otherwise return null (not suitable for table display)
+
+1.4  Build the allCells array
+     [ ] Iterate every row and every column key
+     [ ] For each cell, call getCellContent(value) to get { content, contentForCopy }
+     [ ] Push a CellData object into allCells with row/col indices
+
+================================================================================
+SECTION 2 — ROW SELECTION (CHECKBOXES)
+================================================================================
+Goal: Allow the user to select/deselect rows via checkboxes and click-to-select,
+with shift-click range selection.
+
+2.1  State
+     [ ] selected: Set<number> — stores selected row indices (starts empty)
+     [ ] lastSelectedRef: useRef<number | null> — tracks the last clicked row
+         for shift-range selection
+
+2.2  Reset selection on data change
+     [ ] Add a useEffect that watches `data` and resets selected to new Set()
+         and focusedCell to null — this ensures NO rows are pre-selected when
+         new results arrive
+
+2.3  Toggle a single row (toggleRow)
+     [ ] If shiftKey is held AND lastSelectedRef is set AND differs from
+         current row:
+         - Compute start/end range
+         - Determine target state (add or remove) from the current row's state
+         - Loop from start to end, adding or removing each index
+     [ ] Otherwise:
+         - Toggle the single row in the Set
+         - Update lastSelectedRef.current to the clicked row index
+
+2.4  Toggle all rows (toggleAll)
+     [ ] If all rows are selected, clear the Set (deselect all)
+     [ ] Otherwise, select every row index (0 to rows.length - 1)
+
+2.5  Header checkbox
+     [ ] Render a checkbox in the sticky header row (left-most column)
+     [ ] checked = (selected.size === data.rows.length && rows.length > 0)
+     [ ] onChange calls toggleAll
+
+2.6  Per-row checkbox
+     [ ] Render a checkbox in each row's first cell (sticky left column)
+     [ ] checked = selected.has(rowIdx)
+     [ ] onChange is a no-op (selection handled by onClick)
+     [ ] onClick stops propagation (so it doesn't trigger the row click handler)
+         and calls toggleRow(rowIdx, e.shiftKey)
+
+2.7  Row click selection
+     [ ] Add onClick to each <tr>
+     [ ] If the click target is NOT an INPUT or BUTTON, call toggleRow(rowIdx,
+         e.shiftKey) — this lets the user click anywhere on the row to toggle
+
+2.8  Visual feedback for selected rows
+     [ ] If selected.has(rowIdx): apply bg-primary/15
+     [ ] Otherwise alternate: even rows bg-table-bg, odd rows bg-table-stripe/60
+     [ ] Hover state: hover:bg-primary/5
+
+================================================================================
+SECTION 3 — ROW INDEX COLUMN
+================================================================================
+Goal: Show a 1-based row number column next to the checkbox column.
+
+3.1  Header
+     [ ] Render a "#" header in the second sticky column (width 40px)
+     [ ] Style: text-center, font-bold, text-table-fg/50
+
+3.2  Body cells
+     [ ] Render rowIdx + 1 in each row's second cell
+     [ ] Style: sticky left-10, text-center, text-table-fg/50
+
+================================================================================
+SECTION 4 — STICKY HEADERS AND COLUMNS
+================================================================================
+Goal: Keep the header row and the first two columns (checkbox + index) visible
+when scrolling.
+
+4.1  Sticky header row
+     [ ] Wrap <thead> with className="sticky top-0 z-10"
+     [ ] Header <tr> uses bg-table-header
+
+4.2  Sticky checkbox column
+     [ ] Checkbox <th> and <td>: className includes "sticky left-0 z-20" (header)
+         or "sticky left-0 z-10" (body)
+     [ ] Body cells use bg-inherit so they match the row's background
+
+4.3  Sticky index column
+     [ ] Index <th> and <td>: className includes "sticky left-10 z-20" (header)
+         or "sticky left-10 z-10" (body)
+     [ ] left-10 = 40px (width of the checkbox column)
+
+4.4  Horizontal scroll
+     [ ] Table container has overflow-auto and the <table> uses min-w-max so
+         columns are never squeezed — a horizontal scrollbar appears when there
+         are too many columns to fit
+
+================================================================================
+SECTION 5 — DATA CELLS
+================================================================================
+Goal: Render each cell's value with truncation, URL detection, and hover
+actions.
+
+5.1  Cell content display
+     [ ] Call formatCellDisplay(value) to get the display string
+     [ ] Render inside a <span> with text-table-fg/90
+     [ ] Cell has maxWidth: 300, overflow: hidden, textOverflow: ellipsis
+     [ ] whitespace-nowrap so long content is clipped, not wrapped
+
+5.2  URL detection
+     [ ] If isUrl(value) returns true, render an <a> tag instead of a span
+     [ ] href = normalizeUrl(value)
+     [ ] target="_blank" rel="noopener noreferrer"
+     [ ] Style: text-[hsl(var(--aurora-3))] underline hover:opacity-80
+
+5.3  Cell data attribute
+     [ ] Each <td> gets data-cell={`${rowIdx}-${colIdx}`} — used by the
+         keyboard navigation and popup scroll-into-view logic
+
+5.4  Click to focus
+     [ ] Each <td> onClick sets focusedCell to { row: rowIdx, col: colIdx }
+
+================================================================================
+SECTION 6 — HOVER CELL ACTIONS (COPY + PREVIEW)
+================================================================================
+Goal: Show two small action buttons on the right side of each cell when the
+user hovers over it.
+
+6.1  Container
+     [ ] Position an absolutely-positioned div at right-1, top-1/2,
+         -translate-y-1/2
+     [ ] opacity-0 by default, group-hover:opacity-100 to reveal on hover
+     [ ] flex items-center gap-0.5
+
+6.2  Copy cell button
+     [ ] Icon: Copy (lucide-react)
+     [ ] onClick: stopPropagation + copyCell(cell)
+     [ ] Style: h-5 w-5, rounded, bg-primary, text-primary-foreground,
+         hover:scale-110
+     [ ] title="Copy cell"
+
+6.3  Preview (eye) button
+     [ ] Icon: Eye (lucide-react)
+     [ ] onClick: stopPropagation, set focusedCell to this cell, set
+         popupPos to null (centers popup), set popupCell to this cell's
+         CellData
+     [ ] Style: h-5 w-5, rounded, bg-accent, text-accent-foreground,
+         hover:scale-110
+     [ ] title="View full value"
+
+================================================================================
+SECTION 7 — CELL PREVIEW POPUP
+================================================================================
+Goal: A draggable modal that shows the full, untruncated value of a cell,
+with copy and open-link actions.
+
+7.1  Trigger
+     [ ] popupCell state holds the currently displayed CellData (or null)
+     [ ] popupPos state holds { x, y } for dragged position (or null for
+         centered)
+
+7.2  Overlay
+     [ ] Render a fixed inset-0 z-50 div with bg-black/30
+     [ ] onClick calls handleOverlayClick (closes popup only if no drag
+         occurred — see Section 8)
+
+7.3  Popup container
+     [ ] className: popup-container (used by drag logic to find the element)
+     [ ] max-h-[80vh], w-[90vw], max-w-[600px], flex-col
+     [ ] rounded-xl, border-border, bg-card, shadow-2xl
+     [ ] If popupPos is set: position fixed, left/top from popupPos,
+         transform none, margin 0
+     [ ] If popupPos is null: margin auto (centers within overlay)
+     [ ] onClick stopPropagation so clicking inside doesn't close
+
+7.4  Popup header (drag handle)
+     [ ] onMouseDown calls handleDragStart (see Section 8)
+     [ ] cursor-move, select-none
+     [ ] Shows the column name (popupCell.column) as title
+     [ ] Subtitle: "Drag to move · Arrow keys to navigate · Esc to close"
+     [ ] Close button (X icon) in top-right: bg-destructive/15,
+         text-destructive, hover:scale-110, hover:bg-destructive
+
+7.5  Popup body
+     [ ] flex-1 overflow-auto (scrollable for long values)
+     [ ] <pre> with whitespace-pre-wrap break-words
+     [ ] Shows popupCell.content (full untruncated value)
+
+7.6  Popup footer
+     [ ] If the cell content is a URL: render an "Open" link button
+         (ExternalLink icon) that opens the URL in a new tab
+     [ ] "Copy Value" button: bg-gradient-to-r from-primary to-accent,
+         text-primary-foreground, calls copyCell(popupCell)
+
+================================================================================
+SECTION 8 — POPUP DRAGGING
+================================================================================
+Goal: Let the user drag the popup around the screen by its header.
+
+8.1  Drag state
+     [ ] dragRef: useRef<{ startX, startY, origX, origY } | null>
+     [ ] didDragRef: useRef<boolean> — tracks whether an actual drag occurred
+         (to distinguish drag from click on overlay)
+
+8.2  handleDragStart (onMouseDown of header)
+     [ ] preventDefault and stopPropagation
+     [ ] Set didDragRef.current = false
+     [ ] Find the .popup-container element via closest()
+     [ ] Get its bounding rect (left, top)
+     [ ] Store dragRef = { startX: e.clientX, startY: e.clientY,
+         origX: rect.left, origY: rect.top }
+     [ ] Set popupPos to { x: rect.left, y: rect.top } (switches to fixed
+         positioning)
+
+8.3  Mouse move handler (global, added via useEffect when popup is open)
+     [ ] If dragRef.current is null, return (not dragging)
+     [ ] Set didDragRef.current = true
+     [ ] Compute dx = e.clientX - dragRef.startX, dy = e.clientY - dragRef.startY
+     [ ] Update popupPos = { x: origX + dx, y: origY + dy }
+
+8.4  Mouse up handler (global)
+     [ ] Set dragRef.current = null (stop dragging)
+
+8.5  handleOverlayClick (onClick of overlay)
+     [ ] If didDragRef.current is false (no drag happened), close the popup
+     [ ] Reset didDragRef.current = false
+     [ ] This prevents the popup from closing immediately after a drag
+
+================================================================================
+SECTION 9 — KEYBOARD NAVIGATION (TABLE)
+================================================================================
+Goal: Let the user move a cell selector around the table using arrow keys and
+open the preview popup with Enter.
+
+9.1  State
+     [ ] focusedCell: { row: number; col: number } | null
+     [ ] tableRef: useRef<HTMLDivElement> — the scrollable table container
+
+9.2  Table container setup
+     [ ] tabIndex={0} so the div can receive focus and keyboard events
+     [ ] onKeyDown={handleTableKeyDown}
+     [ ] outline-none (no focus ring on the container itself)
+     [ ] focus:ring-2 focus:ring-primary/40 (subtle ring when focused)
+
+9.3  handleTableKeyDown logic
+     [ ] If popupCell is open, return (let the popup's key handler take over)
+     [ ] If key is not ArrowUp/Down/Left/Right/Enter, return
+     [ ] preventDefault to stop page scrolling
+     [ ] If no focusedCell yet: set to { row: 0, col: 0 } and return
+     [ ] If Enter: find the cell at focusedCell, open the popup (set popupPos
+         null, set popupCell)
+     [ ] ArrowUp: row = Math.max(0, row - 1)
+     [ ] ArrowDown: row = Math.min(rows.length - 1, row + 1)
+     [ ] ArrowLeft: col = Math.max(0, col - 1)
+     [ ] ArrowRight: col = Math.min(keys.length - 1, col + 1)
+     [ ] Update focusedCell
+     [ ] requestAnimationFrame: query the cell element by
+         [data-cell="${row}-${col}"] and call scrollIntoView({ block:
+         "nearest", inline: "nearest" }) to keep it visible
+
+9.4  Visual focus indicator
+     [ ] Each <td> checks: isFocused = focusedCell?.row === rowIdx &&
+         focusedCell?.col === colIdx
+     [ ] If focused: add "ring-2 ring-primary ring-inset bg-primary/10"
+
+================================================================================
+SECTION 10 — KEYBOARD NAVIGATION (POPUP)
+================================================================================
+Goal: When the popup is open, arrow keys move to adjacent cells and update
+both the popup content and the table's cell selector simultaneously.
+
+10.1 Setup
+     [ ] useEffect that runs when popupCell changes
+     [ ] Adds a global keydown listener on window
+     [ ] Returns cleanup that removes the listener
+
+10.2 Escape key
+     [ ] Close the popup (setPopupCell(null))
+
+10.3 Arrow keys
+     [ ] preventDefault
+     [ ] Find the current cell in allCells matching popupCell.row/col
+     [ ] ArrowUp: find cell with same col, row - 1
+     [ ] ArrowDown: find cell with same col, row + 1
+     [ ] ArrowLeft: find cell with same row, col - 1
+     [ ] ArrowRight: find cell with same row, col + 1
+     [ ] If a target cell exists:
+         - setPopupCell(target) — updates popup content
+         - setFocusedCell({ row: target.row, col: target.col }) — moves the
+           table selector in sync
+         - requestAnimationFrame: scroll the target cell into view in the
+           table (so the selector stays visible)
+
+================================================================================
+SECTION 11 — COPY SELECTED ROWS
+================================================================================
+Goal: Copy selected rows to the clipboard as tab-separated values, with an
+option to include column headers.
+
+11.1 State
+     [ ] includeHeaders: boolean (checkbox, starts false)
+     [ ] copiedRow: boolean (for "Copied!" feedback, auto-resets after 2s)
+
+11.2 Controls bar (rendered above the table)
+     [ ] Left side: text showing selection count
+         - "No rows selected" if 0
+         - "All N rows selected" if all
+         - "X of N rows selected" otherwise
+     [ ] Right side: "Headers" checkbox + "Copy Selected" button
+
+11.3 Headers checkbox
+     [ ] checked = includeHeaders
+     [ ] onChange updates state
+     [ ] className: h-3.5 w-3.5 accent-primary
+     [ ] Label text: "Headers"
+
+11.4 Copy Selected button
+     [ ] disabled when selected.size === 0
+     [ ] Icon: Copy (normal) or Check (after copy)
+     [ ] Text: "Copy Selected" (normal) or "Copied!" (after copy)
+     [ ] Style: bg-accent text-accent-foreground (normal) or bg-primary
+         text-primary-foreground (copied)
+
+11.5 copySelected function
+     [ ] Create lines array
+     [ ] If includeHeaders: push data.keys.join("\t") as first line
+     [ ] Sort selected indices numerically
+     [ ] For each selected row:
+         - Map each key to getCellContent(row[key]).contentForCopy
+         - Process with processForCopy(contentForCopy, key)
+         - Join values with "\t"
+     [ ] Join all lines with "\n"
+     [ ] navigator.clipboard.writeText(lines)
+     [ ] Set copiedRow = true, reset after 2000ms
+
+================================================================================
+SECTION 12 — COPY SINGLE CELL
+================================================================================
+Goal: Copy an individual cell's value to clipboard.
+
+12.1 copyCell function
+     [ ] Takes a CellData object
+     [ ] Calls processForCopy(cell.contentForCopy, cell.column)
+     [ ] navigator.clipboard.writeText(processed)
+
+12.2 Used in two places
+     [ ] Hover copy button on each cell (Section 6.2)
+     [ ] "Copy Value" button in the popup footer (Section 7.6)
+
+================================================================================
+SECTION 13 — THEMING AND STYLING
+================================================================================
+Goal: The table uses semantic design tokens so it adapts to light/dark mode.
+
+13.1 Token usage (defined in src/index.css, mapped in tailwind.config.ts)
+     [ ] table-bg: background of table surface and container
+     [ ] table-fg: text color for cells and headers
+     [ ] table-border: border color for cells and header
+     [ ] table-stripe: alternating row background (odd rows)
+     [ ] table-header: header row background
+     [ ] primary: selection highlight, focus ring, copy button
+     [ ] accent: eye/preview button, copy-selected button
+     [ ] aurora-3: URL link color
+     [ ] destructive: error display, close button
+
+13.2 Light mode values (different from dark mode)
+     [ ] table-bg: 220 25% 99% (near-white)
+     [ ] table-fg: 230 35% 12% (dark text)
+     [ ] table-border: 220 20% 88%
+     [ ] table-stripe: 220 20% 94%
+     [ ] table-header: 220 20% 90%
+
+13.3 Dark mode values
+     [ ] table-bg: 230 33% 11% (deep navy)
+     [ ] table-fg: 220 20% 92% (light text)
+     [ ] table-border: 230 25% 20%
+     [ ] table-stripe: 230 25% 14%
+     [ ] table-header: 230 25% 16%
+
+13.4 Editor is separate from table
+     [ ] The code editor uses --editor-bg tokens which are ALWAYS dark
+         (same value in both light and dark mode)
+     [ ] The table uses --table-bg tokens which are theme-aware
+     [ ] These are independent token sets — changing one does not affect
+         the other
+
+13.5 Scrollbar styling
+     [ ] .editor-scroll class applies custom webkit scrollbar styles
+     [ ] Track: bg-editor-gutter
+     [ ] Thumb: bg-editor-border, rounded
+     [ ] Thumb hover: bg-accent/60
+
+13.6 Font
+     [ ] All table text uses font-mono (Space Mono)
+
+================================================================================
+SECTION 14 — OUTPUT PANEL HEADER
+================================================================================
+Goal: The header above the table with tabs, toggle, and clear button.
+
+14.1 Title
+     [ ] MonitorPlay icon in primary color
+     [ ] "OUTPUT" text in font-mono, font-bold, tracking-tight
+
+14.2 Editor toggle button
+     [ ] PanelTopClose icon when editor is visible, PanelTopOpen when hidden
+     [ ] onClick calls onToggleEditor (hides/shows the top code + content
+         panels so output fills the full screen)
+     [ ] title: "Hide code & content panels" / "Show code & content panels"
+
+14.3 View tabs
+     [ ] Three tabs: Table (Table2 icon), JSON (Braces icon), Document
+         (FileText icon)
+     [ ] Active tab: bg-primary text-primary-foreground shadow-sm
+     [ ] Inactive: text-muted-foreground hover:text-foreground
+     [ ] Tab container: bg-muted/40 p-1 rounded-lg
+
+14.4 Clear button
+     [ ] Trash2 icon
+     [ ] disabled when no result
+     [ ] hover: bg-destructive/10 text-destructive
+
+================================================================================
+SECTION 15 — CONSOLE BAR
+================================================================================
+Goal: A collapsible bar showing console.log/warn/error output from code
+execution.
+
+15.1 Visibility
+     [ ] Only rendered when consoleOutput.length > 0
+
+15.2 Header button
+     [ ] Terminal icon + status text
+     [ ] Status: "Console · N errors" / "Console · N warnings" / "Console · N
+         messages"
+     [ ] Color: destructive if errors, yellow if warnings, muted otherwise
+     [ ] ChevronDown icon rotates 180deg when expanded
+
+15.3 Expanded content
+     [ ] max-h-48 overflow-auto
+     [ ] Each entry: [TYPE] message
+     [ ] Color: destructive for errors, yellow for warnings, muted for logs
+
+================================================================================
+SECTION 16 — JSON AND DOCUMENT VIEWS
+================================================================================
+Goal: Alternative output views accessible via the tabs.
+
+16.1 JSON view
+     [ ] Pretty-print result with JSON.stringify(result, null, 2)
+     [ ] Handle undefined/null gracefully
+     [ ] Copy button in top-right corner (Copy / Check icon + "Copy" / "Copied!")
+     [ ] Uses table-bg/table-fg/table-border tokens
+
+16.2 Document view
+     [ ] If string: show as-is
+     [ ] If array: "Array with N items:" + each item on a line
+     [ ] If object: "Object properties:" + each key/value on a line
+     [ ] Otherwise: String(result)
+     [ ] Uses table-bg/table-fg/table-border tokens
+
+================================================================================
+SECTION 17 — ERROR DISPLAY
+================================================================================
+Goal: Show execution errors prominently.
+
+17.1 Error panel
+     [ ] Left border-4 border-destructive, bg-destructive/10
+     [ ] X icon in destructive color
+     [ ] "Execution Error" title in destructive, font-bold
+     [ ] Error message in destructive/80, font-mono text-xs
+
+17.2 Empty state
+     [ ] When no result and no error: "Execute code to see output" in
+         muted-foreground/60
+
+17.3 Not-suitable state
+     [ ] When prepareTableData returns null: "Result is not suitable for
+         table display" in muted-foreground/60
+
+================================================================================
+SECTION 18 — UTILITY FUNCTIONS (from src/lib/executor.ts)
+================================================================================
+Goal: Helper functions used by the table.
+
+18.1 getCellContent(value)
+     [ ] Returns { content, contentForCopy }
+     [ ] content: display string (may be truncated representation of
+         objects/arrays)
+     [ ] contentForCopy: full string for clipboard (JSON for objects)
+
+18.2 formatCellDisplay(value)
+     [ ] Returns a short display string for the cell
+     [ ] Truncates long values with ellipsis
+     [ ] Formats objects/arrays as [object] / [array(N)]
+
+18.3 isUrl(value)
+     [ ] Returns true if the string looks like a URL
+
+18.4 normalizeUrl(value)
+     [ ] Prepends "https://" if no protocol is present
+
+18.5 processForCopy(content, columnName)
+     [ ] Post-processes cell content before copying
+     [ ] May apply column-specific formatting based on columnName
+
+================================================================================
+CHECKLIST SUMMARY
+================================================================================
+Use this final checklist to verify all features are implemented:
+
+[ ] Data preparation (prepareTableData, allCells, CellData/TableData interfaces)
+[ ] Row selection — single click toggle
+[ ] Row selection — shift-click range selection
+[ ] Row selection — select all / deselect all (header checkbox)
+[ ] Row selection — no pre-selection on new results
+[ ] Row selection — visual highlight (bg-primary/15)
+[ ] Row index column (#)
+[ ] Sticky header row (vertical scroll)
+[ ] Sticky checkbox + index columns (horizontal scroll)
+[ ] Horizontal scrollbar (min-w-max, no column squeezing)
+[ ] Cell display with truncation (maxWidth 300, ellipsis)
+[ ] URL detection and clickable links
+[ ] Hover copy cell button
+[ ] Hover preview (eye) button
+[ ] Cell preview popup — centered on open
+[ ] Cell preview popup — draggable by header
+[ ] Cell preview popup — does not close after drag (didDragRef)
+[ ] Cell preview popup — close button (X)
+[ ] Cell preview popup — copy value button
+[ ] Cell preview popup — open URL button (if cell is a URL)
+[ ] Cell preview popup — scrollable body for long values
+[ ] Table keyboard navigation — arrow keys move cell selector
+[ ] Table keyboard navigation — Enter opens popup
+[ ] Table keyboard navigation — scrollIntoView keeps focused cell visible
+[ ] Table keyboard navigation — visual focus ring (ring-2 ring-primary)
+[ ] Popup keyboard navigation — arrow keys move to adjacent cells
+[ ] Popup keyboard navigation — updates popup content
+[ ] Popup keyboard navigation — moves table selector in sync
+[ ] Popup keyboard navigation — Escape closes popup
+[ ] Copy selected rows — tab-separated values
+[ ] Copy selected rows — include headers option (checkbox)
+[ ] Copy selected rows — "Copied!" feedback (2s)
+[ ] Copy selected rows — disabled when no rows selected
+[ ] Copy single cell — via hover button
+[ ] Copy single cell — via popup button
+[ ] Theming — table uses theme-aware tokens (light/dark)
+[ ] Theming — editor uses always-dark tokens (independent from table)
+[ ] Theming — custom scrollbar styling
+[ ] Theming — font-mono (Space Mono) throughout
+[ ] Output panel header — MonitorPlay icon + OUTPUT title
+[ ] Output panel header — editor toggle (hide/show top panels)
+[ ] Output panel header — Table / JSON / Document tabs
+[ ] Output panel header — Clear button
+[ ] Console bar — collapsible, shows log/warn/error counts
+[ ] Console bar — color-coded entries
+[ ] JSON view — pretty-printed with copy button
+[ ] Document view — readable text format
+[ ] Error display — prominent red panel
+[ ] Empty state — "Execute code to see output"
+[ ] Not-suitable state — "Result is not suitable for table display"
+[ ] Utility functions — getCellContent, formatCellDisplay, isUrl,
+    normalizeUrl, processForCopy
+
+================================================================================
+END OF DOCUMENT
+================================================================================
