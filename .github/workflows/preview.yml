@@ -52,6 +52,18 @@ jobs:
               s=re.sub(r"site: '[^']+'", "site: 'https://aintgottaclue.github.io'",s)
               s=s.replace("site: 'https://aintgottaclue.github.io',", "site: 'https://aintgottaclue.github.io',\n  base: '/"+repo+"/',")
               open(p,'w').write(s)
+          if repo=='Biz-Directory-POC':
+              p='src/lib/router.tsx'
+              s=open(p).read()
+              s=s.replace("if (!to.startsWith('/') || to.startsWith('//')) return to;", "if (!to.startsWith('/') || to.startsWith('//')) return to;")
+              s=s.replace("if (to !== '/' && !isCityContent(to)) return to;\n  return cityPath(cityForPath(currentPath).slug, to);", "const target = (to !== '/' && !isCityContent(to)) ? to : cityPath(cityForPath(currentPath).slug, to);\n  return '/Biz-Directory-POC' + target;")
+              open(p,'w').write(s)
+              p='src/components/Header.tsx'
+              s=open(p).read().replace("window.location.assign(cityPath(e.target.value as typeof city.slug))", "window.location.assign('/Biz-Directory-POC' + cityPath(e.target.value as typeof city.slug))")
+              open(p,'w').write(s)
+              p='src/views/NotFound.tsx'
+              s=open(p).read().replace('href="/"', 'href="/Biz-Directory-POC/"')
+              open(p,'w').write(s)
           PY
           if [ -f package.json ]; then npm ci --ignore-scripts && npm run build; else mkdir -p dist; find . -mindepth 1 -maxdepth 1 ! -name .git ! -name .github ! -name dist ! -name '*.zip' -exec cp -a {} dist/ \;; fi
           python3 - <<'PY'
